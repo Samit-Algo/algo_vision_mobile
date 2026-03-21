@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "726776805811",
+    "project_id": "algo-vision-78272",
+    "storage_bucket": "algo-vision-78272.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:726776805811:android:c42fd65d866a40053c73c6",
+        "android_client_info": {
+          "package_name": "com.algovision.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDA3Vyi97lSxT8DEUCoqLojmHqKgqoXhMA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:726776805811:android:980487470edb07cb3c73c6",
+        "android_client_info": {
+          "package_name": "com.visionmobile"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDA3Vyi97lSxT8DEUCoqLojmHqKgqoXhMA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

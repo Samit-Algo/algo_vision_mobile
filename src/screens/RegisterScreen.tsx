@@ -21,14 +21,14 @@ import {useAuth} from '../context/AuthContext';
 type RegisterNavProp = NativeStackNavigationProp<RootStackParamList, 'Register'>;
 
 interface FormData {
-  username: string;
+  fullName: string;
   email: string;
   password: string;
   confirmPassword: string;
 }
 
 interface FormErrors {
-  username?: string;
+  fullName?: string;
   email?: string;
   password?: string;
   confirmPassword?: string;
@@ -41,7 +41,7 @@ export default function RegisterScreen() {
   const [apiError, setApiError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState<FormData>({
-    username: '',
+    fullName: '',
     email: '',
     password: '',
     confirmPassword: '',
@@ -53,10 +53,10 @@ export default function RegisterScreen() {
   const validate = (): boolean => {
     const newErrors: FormErrors = {};
 
-    if (!form.username.trim()) {
-      newErrors.username = 'Username is required';
-    } else if (form.username.trim().length < 3) {
-      newErrors.username = 'Username must be at least 3 characters';
+    if (!form.fullName.trim()) {
+      newErrors.fullName = 'Full name is required';
+    } else if (form.fullName.trim().length < 2) {
+      newErrors.fullName = 'Full name must be at least 2 characters';
     }
 
     if (!form.email.trim()) {
@@ -67,8 +67,8 @@ export default function RegisterScreen() {
 
     if (!form.password) {
       newErrors.password = 'Password is required';
-    } else if (form.password.length < 6) {
-      newErrors.password = 'Password must be at least 6 characters';
+    } else if (form.password.length < 8) {
+      newErrors.password = 'Password must be at least 8 characters';
     }
 
     if (!form.confirmPassword) {
@@ -86,7 +86,7 @@ export default function RegisterScreen() {
     setApiError('');
     setSubmitting(true);
     try {
-      await register(form.username.trim(), form.email.trim(), form.password);
+      await register(form.fullName.trim(), form.email.trim(), form.password);
       // AuthContext sets token → App.tsx auto-navigates to Dashboard
     } catch (e: any) {
       setApiError(e?.message ?? 'Registration failed. Please try again.');
@@ -121,18 +121,18 @@ export default function RegisterScreen() {
           {/* Form Card */}
           <View style={[styles.card, {backgroundColor: colors.card, borderColor: colors.cardBorder, borderWidth: 1}]}>
 
-            {/* Username */}
+            {/* Full name (backend: full_name) */}
             <View style={styles.field}>
-              <Text style={[styles.label, {color: colors.text}]}>Username</Text>
+              <Text style={[styles.label, {color: colors.text}]}>Full name</Text>
               <TextInput
-                style={[styles.input, {backgroundColor: colors.inputBg, borderColor: errors.username ? colors.danger : colors.inputBorder, color: colors.text}]}
-                placeholder="Enter your username"
+                style={[styles.input, {backgroundColor: colors.inputBg, borderColor: errors.fullName ? colors.danger : colors.inputBorder, color: colors.text}]}
+                placeholder="Enter your full name"
                 placeholderTextColor={colors.muted}
-                autoCapitalize="none"
-                value={form.username}
-                onChangeText={v => handleChange('username', v)}
+                autoCapitalize="words"
+                value={form.fullName}
+                onChangeText={v => handleChange('fullName', v)}
               />
-              {errors.username ? <Text style={[styles.errorText, {color: colors.danger}]}>{errors.username}</Text> : null}
+              {errors.fullName ? <Text style={[styles.errorText, {color: colors.danger}]}>{errors.fullName}</Text> : null}
             </View>
 
             {/* Email */}

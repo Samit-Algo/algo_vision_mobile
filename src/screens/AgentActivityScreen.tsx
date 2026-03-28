@@ -5,18 +5,26 @@ import {
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
+  RefreshControl,
+  Platform,
 } from 'react-native';
 import {ScrollView} from 'react-native-gesture-handler';
 import {SafeAreaView} from 'react-native-safe-area-context';
+import {useNavigation} from '@react-navigation/native';
+import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {useTheme} from '../context/ThemeContext';
+import type {RootStackParamList} from '../navigation/types';
 import {agentsApi, Agent} from '../services/api';
 
 type StatusFilter = 'all' | Agent['status'];
 
 export default function AgentActivityScreen() {
+  const navigation =
+    useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const {colors} = useTheme();
 
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [agents, setAgents] = useState<Agent[]>([]);
   const [total, setTotal] = useState(0);
 
@@ -24,9 +32,13 @@ export default function AgentActivityScreen() {
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [openFilter, setOpenFilter] = useState<null | 'status' | 'type'>(null);
 
-  const fetchAgents = useCallback(async () => {
+  const fetchAgents = useCallback(async (mode: 'initial' | 'refresh' = 'initial') => {
     try {
-      setLoading(true);
+      if (mode === 'initial') {
+        setLoading(true);
+      } else {
+        setRefreshing(true);
+      }
       const {agents: list, total: n} = await agentsApi.listWithTotal();
       setAgents(Array.isArray(list) ? list : []);
       setTotal(typeof n === 'number' ? n : list.length);
@@ -35,12 +47,16 @@ export default function AgentActivityScreen() {
       setAgents([]);
       setTotal(0);
     } finally {
-      setLoading(false);
+      if (mode === 'initial') {
+        setLoading(false);
+      } else {
+        setRefreshing(false);
+      }
     }
   }, []);
 
   useEffect(() => {
-    fetchAgents();
+    fetchAgents('initial');
   }, [fetchAgents]);
 
   const typeOptions = useMemo(() => {
@@ -144,7 +160,16 @@ export default function AgentActivityScreen() {
       <ScrollView
         style={{flex: 1}}
         contentContainerStyle={s.scroll}
-        showsVerticalScrollIndicator={false}>
+        showsVerticalScrollIndicator={false}
+        nestedScrollEnabled
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => fetchAgents('refresh')}
+            tintColor={colors.accent}
+            colors={Platform.OS === 'android' ? [colors.accent] : undefined}
+          />
+        }>
         <View style={s.filtersRow}>
           <FilterDropdown
             title="Status"
@@ -185,8 +210,13 @@ export default function AgentActivityScreen() {
           filtered.map(agent => {
             const isActive = agent.status === 'active';
             return (
-              <View
+              <TouchableOpacity
                 key={agent.id}
+                activeOpacity={0.85}
+                disabled={!agent.id}
+                onPress={() =>
+                  navigation.navigate('AgentDetail', {agentId: agent.id})
+                }
                 style={[
                   s.agentRow,
                   {
@@ -221,7 +251,7 @@ export default function AgentActivityScreen() {
                     </Text>
                   </View>
                 </View>
-              </View>
+              </TouchableOpacity>
             );
           })
         )}

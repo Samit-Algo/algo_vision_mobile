@@ -5,6 +5,8 @@ import {
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
+  RefreshControl,
+  Platform,
 } from 'react-native';
 import {ScrollView} from 'react-native-gesture-handler';
 import {SafeAreaView} from 'react-native-safe-area-context';
@@ -21,23 +23,35 @@ export default function CamerasScreen() {
   const {colors} = useTheme();
 
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [cameras, setCameras] = useState<Camera[]>([]);
 
-  const fetchCameras = useCallback(async () => {
-    try {
-      setLoading(true);
-      const list = await camerasApi.list();
-      setCameras(Array.isArray(list) ? list : []);
-    } catch (err) {
-      console.warn('Cameras fetch error:', err);
-      setCameras([]);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const fetchCameras = useCallback(
+    async (mode: 'initial' | 'refresh' = 'initial') => {
+      try {
+        if (mode === 'initial') {
+          setLoading(true);
+        } else {
+          setRefreshing(true);
+        }
+        const list = await camerasApi.list();
+        setCameras(Array.isArray(list) ? list : []);
+      } catch (err) {
+        console.warn('Cameras fetch error:', err);
+        setCameras([]);
+      } finally {
+        if (mode === 'initial') {
+          setLoading(false);
+        } else {
+          setRefreshing(false);
+        }
+      }
+    },
+    [],
+  );
 
   useEffect(() => {
-    fetchCameras();
+    fetchCameras('initial');
   }, [fetchCameras]);
 
   const statusMeta = (status: Camera['status']) => {
@@ -57,10 +71,19 @@ export default function CamerasScreen() {
       <ScrollView
         style={{flex: 1}}
         contentContainerStyle={s.scroll}
-        showsVerticalScrollIndicator={false}>
+        showsVerticalScrollIndicator={false}
+        nestedScrollEnabled
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => fetchCameras('refresh')}
+            tintColor={colors.accent}
+            colors={Platform.OS === 'android' ? [colors.accent] : undefined}
+          />
+        }>
         <View style={[s.sectionHeader, {borderBottomColor: colors.divider}]}>
           <Text style={[s.sectionTitle, {color: colors.text}]}>Cameras</Text>
-          <TouchableOpacity onPress={fetchCameras}>
+          <TouchableOpacity onPress={() => fetchCameras('refresh')}>
             <Text style={[s.sectionAction, {color: colors.accent}]}>Refresh</Text>
           </TouchableOpacity>
         </View>

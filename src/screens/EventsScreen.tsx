@@ -6,19 +6,27 @@ import {
   TouchableOpacity,
   Image,
   ActivityIndicator,
+  RefreshControl,
+  Platform,
 } from 'react-native';
 import {ScrollView} from 'react-native-gesture-handler';
 import {SafeAreaView} from 'react-native-safe-area-context';
+import {useNavigation} from '@react-navigation/native';
+import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {useTheme} from '../context/ThemeContext';
+import type {RootStackParamList} from '../navigation/types';
 import {eventsApi, getToken, AppEvent, EventRange} from '../services/api';
 
 type SeverityFilter = 'all' | 'high' | 'medium' | 'info';
 
 export default function EventsScreen() {
+  const navigation =
+    useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const {colors} = useTheme();
 
   const [authToken, setAuthToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [events, setEvents] = useState<AppEvent[]>([]);
 
   // “No filter” initial state
@@ -36,21 +44,32 @@ export default function EventsScreen() {
     return () => {mounted = false;};
   }, []);
 
-  const fetchEvents = useCallback(async (r: EventRange) => {
-    try {
-      setLoading(true);
-      const list = await eventsApi.list(r, 200, 0);
-      setEvents(Array.isArray(list) ? list : []);
-    } catch (err) {
-      console.warn('Events fetch error:', err);
-      setEvents([]);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const fetchEvents = useCallback(
+    async (r: EventRange, mode: 'initial' | 'refresh' = 'initial') => {
+      try {
+        if (mode === 'initial') {
+          setLoading(true);
+        } else {
+          setRefreshing(true);
+        }
+        const list = await eventsApi.list(r, 200, 0);
+        setEvents(Array.isArray(list) ? list : []);
+      } catch (err) {
+        console.warn('Events fetch error:', err);
+        setEvents([]);
+      } finally {
+        if (mode === 'initial') {
+          setLoading(false);
+        } else {
+          setRefreshing(false);
+        }
+      }
+    },
+    [],
+  );
 
   useEffect(() => {
-    fetchEvents(range);
+    fetchEvents(range, 'initial');
   }, [range, fetchEvents]);
 
   const eventsFiltered = useMemo(() => {
@@ -152,7 +171,16 @@ export default function EventsScreen() {
       <ScrollView
         style={{flex: 1}}
         contentContainerStyle={s.scroll}
-        showsVerticalScrollIndicator={false}>
+        showsVerticalScrollIndicator={false}
+        nestedScrollEnabled
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => fetchEvents(range, 'refresh')}
+            tintColor={colors.accent}
+            colors={Platform.OS === 'android' ? [colors.accent] : undefined}
+          />
+        }>
 
         <View style={s.filtersRow}>
           <FilterDropdown
@@ -189,11 +217,18 @@ export default function EventsScreen() {
         ) : (
           eventsFiltered.map(ev => {
             const sc = sevColor(ev.severity);
-            const thumbUri = ev.id ? eventsApi.imageUrl(ev.id, authToken ?? undefined) : '';
-                const showThumb = Boolean(ev.has_image && thumbUri);
+            const thumbSrc =
+              ev.id && ev.has_image && authToken
+                ? eventsApi.imageSourceWithAuth(ev.id, authToken)
+                : null;
             return (
-              <View
+              <TouchableOpacity
                 key={ev.id}
+                activeOpacity={0.85}
+                disabled={!ev.id}
+                onPress={() =>
+                  navigation.navigate('EventDetail', {eventId: ev.id})
+                }
                 style={[
                   s.row,
                   {backgroundColor: colors.card, borderColor: colors.cardBorder, borderLeftColor: sc.dot},
@@ -212,8 +247,8 @@ export default function EventsScreen() {
                   </View>
 
                   <View style={s.rightThumb}>
-                    {showThumb ? (
-                      <Image source={{uri: thumbUri}} style={s.thumb} />
+                    {thumbSrc ? (
+                      <Image source={thumbSrc} style={s.thumb} />
                     ) : (
                       <View style={[s.thumb, {backgroundColor: colors.inputBorder}]} />
                     )}
@@ -223,7 +258,7 @@ export default function EventsScreen() {
                 <Text style={[s.severityPillText, {color: sc.text}]}>
                   {String(ev.severity).toUpperCase()}
                 </Text>
-              </View>
+              </TouchableOpacity>
             );
           })
         )}

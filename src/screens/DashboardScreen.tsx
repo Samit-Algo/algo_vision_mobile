@@ -7,10 +7,14 @@ import {
   TouchableOpacity,
   RefreshControl,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
 import {ScrollView} from 'react-native-gesture-handler';
 import {SafeAreaView} from 'react-native-safe-area-context';
+import {useNavigation} from '@react-navigation/native';
+import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {useTheme} from '../context/ThemeContext';
+import type {RootStackParamList} from '../navigation/types';
 import {useAuth} from '../context/AuthContext';
 import {useMainTabOptional} from '../context/MainTabContext';
 import {
@@ -27,6 +31,8 @@ import {
 
 export default function DashboardScreen() {
   const mainTab = useMainTabOptional();
+  const navigation =
+    useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const {colors} = useTheme();
   useAuth(); // ensures auth provider is initialized
 
@@ -178,11 +184,13 @@ export default function DashboardScreen() {
           style={{flex: 1}}
           contentContainerStyle={s.scroll}
           showsVerticalScrollIndicator={false}
+          nestedScrollEnabled
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
               onRefresh={onRefresh}
               tintColor={colors.accent}
+              colors={Platform.OS === 'android' ? [colors.accent] : undefined}
             />
           }>
 
@@ -222,10 +230,18 @@ export default function DashboardScreen() {
             ) : (
               eventsToShow.map((ev, i) => {
                 const sc = sevColor(ev.severity);
-                const thumbUri = ev.id ? eventsApi.imageUrl(ev.id, authToken ?? undefined) : '';
+                const thumbSrc =
+                  ev.id && ev.has_image && authToken
+                    ? eventsApi.imageSourceWithAuth(ev.id, authToken)
+                    : null;
                 return (
-                  <View
+                  <TouchableOpacity
                     key={ev.id}
+                    activeOpacity={0.85}
+                    disabled={!ev.id}
+                    onPress={() =>
+                      navigation.navigate('EventDetail', {eventId: ev.id})
+                    }
                     style={[
                       s.alertRow,
                       {backgroundColor: colors.card, borderColor: colors.cardBorder},
@@ -241,8 +257,8 @@ export default function DashboardScreen() {
                       </Text>
                     </View>
                     <View style={s.alertRight}>
-                      {ev.has_image && thumbUri ? (
-                        <Image source={{uri: thumbUri}} style={s.eventThumb} />
+                      {thumbSrc ? (
+                        <Image source={thumbSrc} style={s.eventThumb} />
                       ) : (
                         <View style={[s.eventThumb, {backgroundColor: colors.inputBorder}]} />
                       )}
@@ -256,7 +272,7 @@ export default function DashboardScreen() {
                         })}
                       </Text>
             </View>
-                  </View>
+                  </TouchableOpacity>
                 );
               })
             )}
@@ -277,8 +293,13 @@ export default function DashboardScreen() {
             agents.slice(0, 6).map((agent, i) => {
               const isActive = agent.status === 'active';
               return (
-                <View
+                <TouchableOpacity
                   key={agent.id}
+                  activeOpacity={0.85}
+                  disabled={!agent.id}
+                  onPress={() =>
+                    navigation.navigate('AgentDetail', {agentId: agent.id})
+                  }
                   style={[
                     s.agentRow,
                     {
@@ -312,7 +333,7 @@ export default function DashboardScreen() {
                       </Text>
                     </View>
                   </View>
-                </View>
+                </TouchableOpacity>
               );
             })
           )}

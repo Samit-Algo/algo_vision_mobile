@@ -65,7 +65,8 @@ export async function apiFetch<T = unknown>(
 // ── Auth ──────────────────────────────────────────────────────────────────────
 // ─────────────────────────────────────────────────────────────────────────────
 
-export interface RegisterPayload { username: string; email: string; password: string; }
+/** Matches backend `UserRegistrationRequest`: full_name, email, password */
+export interface RegisterPayload { full_name: string; email: string; password: string; }
 export interface LoginPayload    { email: string; password: string; }
 export interface AuthResponse    { access_token: string; token_type: string; }
 export interface UserProfile {
@@ -226,17 +227,76 @@ export interface Agent {
   camera_name?: string;
   type: string;
   status: 'active' | 'paused' | 'stopped';
+  /** Set `agent_source=workflow` on stop when `"workflow"`. */
+  agent_source?: string | null;
+}
+
+/** Matches backend `AgentResponse` (get-by-id). */
+export interface AgentDetailResponse {
+  id?: string | null;
+  name: string;
+  camera_id: string;
+  camera_name?: string | null;
+  model: string;
+  fps?: number | null;
+  rules: Record<string, unknown>[];
+  run_mode?: string | null;
+  interval_minutes?: number | null;
+  check_duration_seconds?: number | null;
+  start_time?: string | null;
+  end_time?: string | null;
+  zone?: Record<string, unknown> | null;
+  requires_zone: boolean;
+  status: string;
+  created_at?: string | null;
+  owner_user_id?: string | null;
+  stream_config?: Record<string, unknown> | null;
+  workflow_id?: string | null;
+  video_path?: string | null;
+  agent_source?: string | null;
+  schedule_type?: string | null;
+  active_days?: string[] | null;
+  source_type?: string | null;
+  workflow_config_id?: string | null;
+  updated_at?: string | null;
+}
+
+function mapListStatusForAgent(raw: string): Agent['status'] {
+  const x = String(raw ?? '')
+    .toLowerCase()
+    .trim();
+  if (x === 'paused') {
+    return 'paused';
+  }
+  if (
+    ['inactive', 'stopped', 'complete', 'completed', 'expired', 'cancelled'].includes(x)
+  ) {
+    return 'stopped';
+  }
+  return 'active';
+}
+
+function mapAgentFromListItem(raw: any): Agent {
+  return {
+    id: String(raw?.id ?? ''),
+    name: String(raw?.name ?? 'Agent'),
+    camera_id: raw?.camera_id,
+    camera_name: raw?.camera_name,
+    type: String(raw?.type ?? raw?.run_mode ?? '—'),
+    status: mapListStatusForAgent(String(raw?.status ?? 'ACTIVE')),
+    agent_source: raw?.agent_source ?? null,
+  };
 }
 
 export const agentsApi = {
   list: async () => {
     const r = await apiFetch<any>('/api/v1/agents/list');
-    return unwrapArray<Agent>(r);
+    return unwrapArray<any>(r).map(mapAgentFromListItem);
   },
   /** Same endpoint; exposes `total` when the backend returns `{ total, items }`. */
   listWithTotal: async (): Promise<{agents: Agent[]; total: number}> => {
     const r = await apiFetch<any>('/api/v1/agents/list');
-    const agents = unwrapArray<Agent>(r);
+    const agents = unwrapArray<any>(r).map(mapAgentFromListItem);
     const total =
       typeof r?.total === 'number'
         ? r.total
@@ -244,6 +304,32 @@ export const agentsApi = {
           ? r.data.total
           : agents.length;
     return {agents, total};
+  },
+
+  get: (agentId: string) =>
+    apiFetch<AgentDetailResponse>(
+      `/api/v1/agents/${encodeURIComponent(agentId)}`,
+    ),
+
+  pause: (agentId: string) =>
+    apiFetch<{ok: boolean; message?: string}>(
+      `/api/v1/agents/pause/${encodeURIComponent(agentId)}`,
+      {method: 'POST'},
+    ),
+
+  resume: (agentId: string) =>
+    apiFetch<{ok: boolean; message?: string}>(
+      `/api/v1/agents/resume/${encodeURIComponent(agentId)}`,
+      {method: 'POST'},
+    ),
+
+  stop: (agentId: string, opts?: {agentSource?: 'workflow' | null}) => {
+    const q =
+      opts?.agentSource === 'workflow' ? '?agent_source=workflow' : '';
+    return apiFetch<{ok: boolean; message?: string}>(
+      `/api/v1/agents/stop/${encodeURIComponent(agentId)}${q}`,
+      {method: 'POST'},
+    );
   },
 };
 
@@ -267,6 +353,25 @@ export interface AppEvent {
   received_at?: string;
   description?: string;
   has_image?: boolean;
+}
+
+/** Matches backend `EventDetailResponse`. */
+export interface EventDetailResponse {
+  id: string;
+  owner_user_id?: string | null;
+  session_id: string;
+  label: string;
+  severity: string;
+  rule_index?: number | null;
+  camera_id?: string | null;
+  agent_id?: string | null;
+  agent_name?: string | null;
+  device_id?: string | null;
+  event_ts?: string | null;
+  received_at: string;
+  has_image: boolean;
+  has_json: boolean;
+  metadata: Record<string, unknown>;
 }
 
 export const eventsApi = {
@@ -297,13 +402,31 @@ export const eventsApi = {
     });
   },
 
-  // Some backends can read JWT from query params (similar to your websocket).
-  // If not supported, this will still 401 and we’ll need a small backend tweak
-  // or fetch+blob workaround.
+  get: (eventId: string) =>
+    apiFetch<EventDetailResponse>(
+      `/api/v1/events/${encodeURIComponent(eventId)}`,
+    ),
+
+  /**
+   * Authenticated image URL for `<Image />`. Prefer `imageSourceWithAuth` — the API
+   * uses `Depends(get_current_user)` (Bearer), not query `token`.
+   */
   imageUrl: (eventId: string, token?: string) =>
     token
-      ? `${BASE_URL}/api/v1/events/${eventId}/image?token=${encodeURIComponent(token)}`
-      : `${BASE_URL}/api/v1/events/${eventId}/image`,
+      ? `${BASE_URL}/api/v1/events/${encodeURIComponent(eventId)}/image?token=${encodeURIComponent(token)}`
+      : `${BASE_URL}/api/v1/events/${encodeURIComponent(eventId)}/image`,
+
+  /** `source` for React Native `<Image />` with Bearer token. */
+  imageSourceWithAuth: (
+    eventId: string,
+    token: string | null,
+  ): {uri: string; headers?: {[key: string]: string}} => {
+    const uri = `${BASE_URL}/api/v1/events/${encodeURIComponent(eventId)}/image`;
+    if (token) {
+      return {uri, headers: {Authorization: `Bearer ${token}`}};
+    }
+    return {uri};
+  },
 };
 
 // ─────────────────────────────────────────────────────────────────────────────

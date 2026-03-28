@@ -140,7 +140,10 @@ export default function MainTabPagerScreen() {
       <MainTabContext.Provider value={contextValue}>
         <SafeAreaView
           edges={['top', 'left', 'right']}
-          style={[styles.headerSafe, {backgroundColor: colors.headerBg}]}>
+          style={[
+            styles.headerSafe,
+            {backgroundColor: colors.headerBg},
+          ]}>
           <StatusBar
             barStyle={isDark ? 'light-content' : 'dark-content'}
             backgroundColor={colors.headerBg}
@@ -173,8 +176,9 @@ export default function MainTabPagerScreen() {
 
 const styles = StyleSheet.create({
   root: {flex: 1},
-  headerSafe: {},
-  pager: {flex: 1},
+  /** Must stack above PagerView so the profile menu (overflow) is not covered by tab pages. */
+  headerSafe: {zIndex: 100, elevation: 100, overflow: 'visible'},
+  pager: {flex: 1, zIndex: 0},
   page: {flex: 1},
   footerSafe: {},
 });

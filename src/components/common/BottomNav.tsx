@@ -2,6 +2,15 @@ import React from 'react';
 import {Text, TouchableOpacity, View, StyleSheet} from 'react-native';
 import {useNavigation, useRoute} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
+import {FontAwesomeIcon} from '@fortawesome/react-native-fontawesome';
+import {
+  type IconDefinition,
+  faHouse,
+  faCamera,
+  faUserTie,
+  faBell,
+  faMessage,
+} from '@fortawesome/free-solid-svg-icons';
 import {useTheme} from '../../context/ThemeContext';
 import {useMainTabOptional} from '../../context/MainTabContext';
 import type {MainTabRouteName, RootStackParamList} from '../../navigation/types';
@@ -11,15 +20,18 @@ type NavProp = NativeStackNavigationProp<RootStackParamList>;
 type NavItem = {
   label: string;
   route: MainTabRouteName;
+  icon: IconDefinition;
 };
 
 const NAV_ITEMS: NavItem[] = [
-  {label: 'Home', route: 'Dashboard'},
-  {label: 'Events', route: 'Events'},
-  {label: 'Agents', route: 'AgentActivity'},
-  {label: 'Cameras', route: 'Cameras'},
-  {label: 'Chat', route: 'Chat'},
+  {label: 'Home', route: 'Dashboard', icon: faHouse},
+  {label: 'Camera', route: 'Cameras', icon: faCamera},
+  {label: 'Agents', route: 'AgentActivity', icon: faUserTie},
+  {label: 'Events', route: 'Events', icon: faBell},
+  {label: 'Chat', route: 'Chat', icon: faMessage},
 ];
+
+const TAB_LABEL_SIZE = 11;
 
 export default function BottomNav() {
   const navigation = useNavigation<NavProp>();
@@ -42,6 +54,7 @@ export default function BottomNav() {
       ]}>
       {NAV_ITEMS.map(item => {
         const isActive = highlightTab != null && item.route === highlightTab;
+        const tint = isActive ? colors.accent : colors.tabIcon;
         return (
           <TouchableOpacity
             key={item.label}
@@ -56,11 +69,17 @@ export default function BottomNav() {
             {isActive && (
               <View style={[s.navIndicator, {backgroundColor: colors.accent}]} />
             )}
+            <FontAwesomeIcon
+              icon={item.icon}
+              size={TAB_LABEL_SIZE}
+              color={tint}
+              style={s.navIcon}
+            />
             <Text
               style={[
                 s.navLabel,
                 {
-                  color: isActive ? colors.accent : colors.tabIcon,
+                  color: tint,
                 },
                 isActive && s.navLabelActive,
               ]}>
@@ -80,7 +99,7 @@ const s = StyleSheet.create({
     paddingVertical: 10,
     paddingBottom: 16,
   },
-  navItem: {flex: 1, alignItems: 'center', gap: 5, paddingTop: 4},
+  navItem: {flex: 1, alignItems: 'center', paddingTop: 4},
   navIndicator: {
     width: 18,
     height: 3,
@@ -88,6 +107,7 @@ const s = StyleSheet.create({
     position: 'absolute',
     top: 0,
   },
-  navLabel: {fontSize: 11, fontWeight: '500', marginTop: 6},
+  navIcon: {marginTop: 6},
+  navLabel: {fontSize: TAB_LABEL_SIZE, fontWeight: '500', marginTop: 4},
   navLabelActive: {fontWeight: '700'},
 });

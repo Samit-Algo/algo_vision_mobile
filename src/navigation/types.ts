@@ -12,4 +12,8 @@ export type RootStackParamList = {
   /** Swipeable main tabs (Dashboard … Chat). Use `jumpTo` when opening from e.g. CameraLive. */
   MainTabs: {jumpTo?: MainTabRouteName} | undefined;
   CameraLive: {cameraId: string; cameraName?: string};
+  /** Full event detail (opened from Dashboard or Events). */
+  EventDetail: {eventId: string};
+  /** Full agent detail + pause / resume / stop (Dashboard or Agent activity). */
+  AgentDetail: {agentId: string};
 };

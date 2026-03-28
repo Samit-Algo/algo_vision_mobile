@@ -26,7 +26,7 @@ interface AuthCtx {
   token:   string | null;
   loading: boolean;
   login:    (email: string, password: string) => Promise<void>;
-  register: (username: string, email: string, password: string) => Promise<void>;
+  register: (fullName: string, email: string, password: string) => Promise<void>;
   logout:   () => void;
 }
 
@@ -107,8 +107,8 @@ export function AuthProvider({children}: {children: React.ReactNode}) {
     await afterAuth(res.access_token);
   };
 
-  const register = async (username: string, email: string, password: string) => {
-    const res = await authApi.register({username, email, password});
+  const register = async (fullName: string, email: string, password: string) => {
+    const res = await authApi.register({full_name: fullName.trim(), email, password});
     await afterAuth(res.access_token);
   };
 

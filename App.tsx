@@ -11,6 +11,8 @@ import LoginScreen    from './src/screens/LoginScreen';
 import RegisterScreen from './src/screens/RegisterScreen';
 import MainTabPagerScreen from './src/screens/MainTabPagerScreen';
 import CameraLiveScreen from './src/screens/CameraLiveScreen';
+import EventDetailScreen from './src/screens/EventDetailScreen';
+import AgentDetailScreen from './src/screens/AgentDetailScreen';
 import {RootStackParamList} from './src/navigation/types';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -34,6 +36,8 @@ function RootNavigator() {
         <>
           <Stack.Screen name="MainTabs" component={MainTabPagerScreen} />
           <Stack.Screen name="CameraLive" component={CameraLiveScreen} />
+          <Stack.Screen name="EventDetail" component={EventDetailScreen} />
+          <Stack.Screen name="AgentDetail" component={AgentDetailScreen} />
         </>
       ) : (
         // ── Unauthenticated ──

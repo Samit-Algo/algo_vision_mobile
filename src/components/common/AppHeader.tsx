@@ -121,8 +121,9 @@ const s = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    zIndex: 10,
-    elevation: 10,
+    /** Above sibling scroll/pager content so the profile dropdown is not covered. */
+    zIndex: 100,
+    elevation: 100,
   },
   left: {
     flexDirection: 'row',

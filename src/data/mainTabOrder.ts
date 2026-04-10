@@ -1,4 +1,4 @@
-import type {MainTabRouteName} from './types';
+import type {MainTabRouteName} from '../navigation/types';
 
 /** Must match `BottomNav` order — used for horizontal swipe between tabs. */
 export const MAIN_TAB_ROUTES: MainTabRouteName[] = [

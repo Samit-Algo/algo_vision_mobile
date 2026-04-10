@@ -12,8 +12,8 @@ import {
 import type {
   AgentChatMessageResponse,
   PendingApprovalPayload,
-} from '../../services/api';
-import {getToken, getAuthenticatedCameraSnapshotUrl} from '../../services/api';
+} from '../../api';
+import {getToken, getAuthenticatedCameraSnapshotUrl} from '../../api';
 import {useTheme} from '../../context/ThemeContext';
 import PendingApprovalCard from './PendingApprovalCard';
 import ZoneEditorModal, {type ZoneEditorMode} from './ZoneEditorModal';

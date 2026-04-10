@@ -604,6 +604,183 @@ export function structuredAssistantMessage(
   };
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// ── Voice chat: WebSocket (live PCM) — primary path for Ask mode ─────────────
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * `GET` upgrade URL for `ws(s)://host/api/v1/general-chat/voice-stream?token=JWT`.
+ * Matches backend: raw PCM16 mono 16kHz sent as binary frames; JSON control + binary TTS.
+ */
+export function getGeneralChatVoiceStreamUrl(token: string): string {
+  const root = BASE_URL.replace(/^http/, 'ws').replace(/\/$/, '');
+  return `${root}/api/v1/general-chat/voice-stream?token=${encodeURIComponent(token)}`;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ── Voice chat (legacy HTTP SSE + file upload) ─────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface VoiceStreamEvent {
+  // Exact SSE event names from the backend:
+  // 'sst_result' / 'stt_result' → STT transcript (backend spelling varies)
+  // 'llm_token'   → streaming LLM text token
+  // 'tts_chunk'   → base64 WAV audio chunk
+  // 'done'        → stream finished
+  // 'error'       → error
+  type: 'sst_result' | 'stt_result' | 'llm_token' | 'tts_chunk' | 'done' | 'error';
+  text?: string;
+  audio?: string; // base64 audio (tts_chunk)
+  message?: string;
+}
+
+/**
+ * POST /api/v1/general-chat/voice-message/stream
+ * Sends audio file and reads Server-Sent Events: STT → LLM → TTS.
+ * `onEvent` is called for each parsed SSE event.
+ * Returns when the stream ends or [DONE] is received.
+ */
+export async function voiceChatStream(
+  audioUri: string,
+  sessionId: string | undefined,
+  onEvent: (ev: VoiceStreamEvent) => void,
+): Promise<void> {
+  const token = await getToken();
+
+  // Ensure the URI has the file:// scheme React Native fetch requires
+  const fileUri = audioUri.startsWith('file://') ? audioUri : `file://${audioUri}`;
+
+  // Derive MIME type and filename from the actual extension
+  const ext  = fileUri.split('.').pop()?.toLowerCase() ?? 'wav';
+  const mime = ext === 'wav' ? 'audio/wav'
+             : ext === 'm4a' ? 'audio/m4a'
+             : ext === 'mp4' ? 'audio/mp4'
+             : 'audio/wav';
+
+  const formData = new FormData();
+  formData.append('audio_file', {
+    uri:  fileUri,
+    type: mime,
+    name: `voice.${ext}`,
+  } as unknown as Blob);
+  if (sessionId) {
+    formData.append('session_id', sessionId);
+  }
+
+  let res: Response;
+  try {
+    res = await fetch(`${BASE_URL}/api/v1/general-chat/voice-message/stream`, {
+      method: 'POST',
+      headers: {
+        // Do NOT set Content-Type — fetch sets it with the multipart boundary automatically.
+        ...(token ? {Authorization: `Bearer ${token}`} : {}),
+      },
+      body: formData,
+    });
+  } catch (err: any) {
+    throw new ApiError(0, `Voice stream network error: ${err?.message ?? String(err)}`);
+  }
+
+  if (!res.ok) {
+    let msg = `HTTP ${res.status}`;
+    try { const b = await res.json(); msg = b.detail ?? b.message ?? msg; } catch {}
+    throw new ApiError(res.status, msg);
+  }
+
+  // React Native's Hermes fetch does not expose res.body as a ReadableStream.
+  // Read the full SSE response as text, split into blocks, parse each event.
+  const rawText = await res.text();
+
+  // Normalize line endings — some SSE servers emit CRLF which would otherwise
+  // break the `\n\n` block separator and collapse the whole stream into one
+  // block (where only the last data: line would survive).
+  const normalized = rawText.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+
+  // SSE blocks are separated by blank lines; each block has lines like:
+  //   event: <type>
+  //   data: <json>
+  // (data: may appear on multiple lines — concatenate with \n per spec)
+  const blocks = normalized.split(/\n\n+/);
+
+  console.log(`[voiceStream] received ${blocks.length} SSE blocks, ${rawText.length} bytes`);
+
+  for (const block of blocks) {
+    if (!block.trim()) {continue;}
+
+    let eventName = '';
+    const dataLines: string[] = [];
+
+    for (const line of block.split('\n')) {
+      if (!line) {continue;}
+      if (line.startsWith('event:')) {
+        eventName = line.slice(6).trim();
+      } else if (line.startsWith('data:')) {
+        dataLines.push(line.slice(5).trim());
+      }
+    }
+
+    if (dataLines.length === 0) {continue;}
+    const dataLine = dataLines.join('\n');
+
+    if (dataLine === '[DONE]') {
+      onEvent({type: 'done'});
+      continue;
+    }
+
+    let parsed: Record<string, unknown>;
+    try {
+      parsed = JSON.parse(dataLine);
+    } catch {
+      // non-JSON block — ignore
+      continue;
+    }
+
+    // Map backend event name → our type.
+    // Backend sends: (s)stt_result | llm_token | tts_chunk | done | error
+    const rawType = eventName || (parsed.type as string) || '';
+    let type: VoiceStreamEvent['type'];
+
+    if      (rawType === 'sst_result')  {type = 'sst_result';}
+    else if (rawType === 'stt_result')  {type = 'stt_result';}
+    else if (rawType === 'llm_token')   {type = 'llm_token';}
+    else if (rawType === 'tts_chunk')   {type = 'tts_chunk';}
+    else if (rawType === 'error')       {type = 'error';}
+    else                                {type = 'done';}
+
+    // Extract text — backend may use any of several field names depending
+    // on the event type. Accept the common variants.
+    const textField =
+      typeof parsed.text       === 'string' ? (parsed.text       as string) :
+      typeof parsed.transcript === 'string' ? (parsed.transcript as string) :
+      typeof parsed.token      === 'string' ? (parsed.token      as string) :
+      typeof parsed.content    === 'string' ? (parsed.content    as string) :
+      typeof parsed.delta      === 'string' ? (parsed.delta      as string) :
+      undefined;
+
+    const audioField =
+      typeof parsed.audio      === 'string' ? (parsed.audio      as string) :
+      typeof parsed.audio_b64  === 'string' ? (parsed.audio_b64  as string) :
+      typeof parsed.chunk      === 'string' ? (parsed.chunk      as string) :
+      undefined;
+
+    if (type === 'sst_result' || type === 'stt_result' || type === 'llm_token') {
+      console.log(`[voiceStream] ${type}: ${textField ?? '(empty)'}`);
+    } else if (type === 'tts_chunk') {
+      console.log(`[voiceStream] tts_chunk: ${audioField ? audioField.length + ' b64 chars' : '(empty)'}`);
+    }
+
+    onEvent({
+      // Normalize transcript spelling so UI can handle one case reliably.
+      type: type === 'stt_result' ? 'sst_result' : type,
+      text:    textField,
+      audio:   audioField,
+      message: typeof parsed.message === 'string' ? parsed.message : undefined,
+    });
+  }
+
+  onEvent({type: 'done'});
+}
+
 export const chatApi = {
   /** Vision agent chat — `POST /api/v1/chat/message` (non-stream). */
   sendAgent: (body: ChatMessageRequest) =>

@@ -3,6 +3,10 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <!-- Android 13+ (API 33): runtime notification permission -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Voice recording -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="28" />
 
     <application
       android:name=".MainApplication"

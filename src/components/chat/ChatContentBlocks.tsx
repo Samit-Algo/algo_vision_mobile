@@ -10,8 +10,8 @@ import {
   Platform,
 } from 'react-native';
 import Video from 'react-native-video';
-import type {GeneralChatContentBlock} from '../../services/api';
-import {textFromContentBlock, urlWithAuthForMedia} from '../../services/api';
+import type {GeneralChatContentBlock} from '../../api';
+import {textFromContentBlock, urlWithAuthForMedia} from '../../api';
 import {useTheme} from '../../context/ThemeContext';
 import ChatMarkdownBody from './ChatMarkdownBody';
 

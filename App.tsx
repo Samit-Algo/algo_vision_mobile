@@ -7,12 +7,12 @@ import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import {ThemeProvider} from './src/context/ThemeContext';
 import {AuthProvider, useAuth} from './src/context/AuthContext';
 
-import LoginScreen    from './src/screens/LoginScreen';
-import RegisterScreen from './src/screens/RegisterScreen';
-import MainTabPagerScreen from './src/screens/MainTabPagerScreen';
-import CameraLiveScreen from './src/screens/CameraLiveScreen';
-import EventDetailScreen from './src/screens/EventDetailScreen';
-import AgentDetailScreen from './src/screens/AgentDetailScreen';
+import LoginScreen from './src/pages/LoginScreen';
+import RegisterScreen from './src/pages/RegisterScreen';
+import MainTabPagerScreen from './src/pages/MainTabPagerScreen';
+import CameraLiveScreen from './src/pages/CameraLiveScreen';
+import EventDetailScreen from './src/pages/EventDetailScreen';
+import AgentDetailScreen from './src/pages/AgentDetailScreen';
 import {RootStackParamList} from './src/navigation/types';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();

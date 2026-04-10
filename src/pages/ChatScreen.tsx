@@ -14,7 +14,7 @@ import {
   assistantTextFromGeneralResponse,
   chatApi,
   structuredAssistantMessage,
-} from '../services/api';
+} from '../api';
 
 export default function ChatScreen() {
   const {colors, isDark} = useTheme();
@@ -28,9 +28,12 @@ export default function ChatScreen() {
   const [agentSessionId,     setAgentSessionId]     = useState<string | undefined>();
   const [chatMode,           setChatMode]           = useState<ChatMode>('ask');
   const [resumeMessageId,    setResumeMessageId]    = useState<string | null>(null);
+  const [voiceActive,        setVoiceActive]        = useState(false);
 
   const flatListRef = useRef<FlatList>(null);
   const messagesRef = useRef<Message[]>([]);
+  /** Current assistant bubble id for streaming voice tokens (reset each speech_start). */
+  const voiceAiMsgIdRef = useRef<string | null>(null);
   useEffect(() => {
     messagesRef.current = messages;
   }, [messages]);
@@ -129,7 +132,69 @@ export default function ChatScreen() {
     ],
   );
 
-  const handleVoiceResult = useCallback((text: string) => sendMessage(text), [sendMessage]);
+  // ── Voice: WebSocket /general-chat/voice-stream (server-driven STT + LLM + TTS) ─
+
+  const handleVoiceSpeechStart = useCallback((): string => {
+    voiceAiMsgIdRef.current = null;
+    const id = `u-voice-${Date.now()}`;
+    upsertMessage({id, role: 'user', content: 'Listening…', timestamp: new Date()});
+    return id;
+  }, [upsertMessage]);
+
+  const handleVoicePartialTranscript = useCallback(
+    (msgId: string, text: string) => {
+      upsertMessage({id: msgId, role: 'user', content: text, timestamp: new Date()});
+    },
+    [upsertMessage],
+  );
+
+  const handleVoiceFinalTranscript = useCallback(
+    (msgId: string, text: string) => {
+      upsertMessage({id: msgId, role: 'user', content: text, timestamp: new Date()});
+    },
+    [upsertMessage],
+  );
+
+  const handleVoiceAssistantDelta = useCallback(
+    (delta: string) => {
+      if (!delta) {return;}
+      let aid = voiceAiMsgIdRef.current;
+      if (!aid) {
+        aid = `a-voice-${Date.now()}`;
+        voiceAiMsgIdRef.current = aid;
+        upsertMessage({id: aid, role: 'assistant', content: delta, timestamp: new Date()});
+        return;
+      }
+      setMessages(prev => {
+        const idx = prev.findIndex(m => m.id === aid);
+        if (idx === -1) {
+          return [
+            ...prev,
+            {id: aid!, role: 'assistant' as const, content: delta, timestamp: new Date()},
+          ];
+        }
+        const next = [...prev];
+        const cur = next[idx];
+        next[idx] = {...cur, content: (cur.content || '') + delta};
+        return next;
+      });
+      scrollToBottom();
+    },
+    [upsertMessage, scrollToBottom],
+  );
+
+  const handleVoiceAssistantFinal = useCallback(
+    (full: string) => {
+      const aid = voiceAiMsgIdRef.current;
+      if (!aid || !full) {return;}
+      upsertMessage({id: aid, role: 'assistant', content: full, timestamp: new Date()});
+    },
+    [upsertMessage],
+  );
+
+  const handleVoiceSessionUpdate = useCallback((sessionId: string | undefined) => {
+    if (sessionId) {setAskSessionId(sessionId);}
+  }, []);
 
   /** HITL: Approve / Reject — same resume payload as `layout/chatbot-core.js` (non-stream). */
   const handleAgentResume = useCallback(
@@ -291,7 +356,7 @@ export default function ChatScreen() {
 
         {isEmpty ? (
           <View style={styles.flex}>
-            <SuggestionChips onSelect={sendMessage} />
+            {!voiceActive && <SuggestionChips onSelect={sendMessage} />}
           </View>
         ) : (
           <FlatList
@@ -321,7 +386,14 @@ export default function ChatScreen() {
         <ChatInput
           onSend={sendMessage}
           onAttachmentPick={handleAttachmentPick}
-          onVoiceResult={handleVoiceResult}
+          onVoiceSpeechStart={handleVoiceSpeechStart}
+          onVoicePartialTranscript={handleVoicePartialTranscript}
+          onVoiceFinalTranscript={handleVoiceFinalTranscript}
+          onVoiceAssistantDelta={handleVoiceAssistantDelta}
+          onVoiceAssistantFinal={handleVoiceAssistantFinal}
+          onVoiceSessionUpdate={handleVoiceSessionUpdate}
+          onVoiceActiveChange={setVoiceActive}
+          askSessionId={askSessionId}
           disabled={isTyping}
           pendingAttachments={pendingAttachments}
           chatMode={chatMode}

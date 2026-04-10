@@ -15,7 +15,7 @@ import {
   setUnauthorizedHandler,
   UserProfile,
   notificationSocket,
-} from '../services/api';
+} from '../api';
 import messaging from '@react-native-firebase/messaging';
 import {promptNotificationPermissionAfterLogin} from '../utils/notificationPermission';
 

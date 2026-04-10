@@ -19,7 +19,7 @@ import {
   EventDetailResponse,
   getToken,
   ApiError,
-} from '../services/api';
+} from '../api';
 import type {RootStackParamList} from '../navigation/types';
 
 type Nav = NativeStackNavigationProp<RootStackParamList, 'EventDetail'>;

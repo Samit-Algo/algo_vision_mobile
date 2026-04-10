@@ -27,7 +27,7 @@ import {
   AppEvent,
   WsNotification,
   getToken,
-} from '../services/api';
+} from '../api';
 
 export default function DashboardScreen() {
   const mainTab = useMainTabOptional();

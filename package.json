@@ -22,6 +22,8 @@
     "@react-navigation/routers": "^7.5.3",
     "react": "19.2.3",
     "react-native": "0.84.1",
+    "react-native-audio-record": "^0.2.2",
+    "react-native-fs": "^2.20.0",
     "react-native-gesture-handler": "^2.30.0",
     "react-native-markdown-display": "^7.0.2",
     "react-native-pager-view": "^6.9.1",

@@ -10,9 +10,9 @@ import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {useTheme} from '../context/ThemeContext';
 import {MainTabContext} from '../context/MainTabContext';
-import AppHeader from '../components/common/AppHeader';
-import BottomNav from '../components/common/BottomNav';
-import {MAIN_TAB_ROUTES} from '../navigation/mainTabOrder';
+import AppHeader from '../components/layout/AppHeader';
+import BottomNav from '../components/layout/BottomNav';
+import {MAIN_TAB_ROUTES} from '../data/mainTabOrder';
 import type {MainTabRouteName, RootStackParamList} from '../navigation/types';
 
 import DashboardScreen from './DashboardScreen';
@@ -158,7 +158,7 @@ export default function MainTabPagerScreen() {
           onPageSelected={onPageSelected}
           overdrag={false}
           scrollEnabled>
-          {MAIN_TAB_ROUTES.map(name => (
+          {MAIN_TAB_ROUTES.map((name: MainTabRouteName) => (
             <View key={name} style={styles.page} collapsable={false}>
               {renderMainTabPage(name)}
             </View>

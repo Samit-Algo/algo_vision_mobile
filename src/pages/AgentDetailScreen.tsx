@@ -18,7 +18,7 @@ import {
   agentsApi,
   AgentDetailResponse,
   ApiError,
-} from '../services/api';
+} from '../api';
 import type {RootStackParamList} from '../navigation/types';
 import {getAgentControlUi} from '../utils/agentControls';
 

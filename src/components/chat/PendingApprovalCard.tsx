@@ -6,7 +6,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
 } from 'react-native';
-import type {PendingApprovalPayload} from '../../services/api';
+import type {PendingApprovalPayload} from '../../api';
 import {useTheme} from '../../context/ThemeContext';
 
 interface Props {

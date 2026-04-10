@@ -1,4 +1,4 @@
-import type {AgentChatMessageResponse, GeneralChatContentBlock} from '../services/api';
+import type {AgentChatMessageResponse, GeneralChatContentBlock} from '../api';
 
 /** Composer mode: Ask vs Agent (UI selector in chat input). */
 export type ChatMode = 'ask' | 'agent';

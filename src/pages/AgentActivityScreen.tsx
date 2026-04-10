@@ -14,7 +14,7 @@ import {useNavigation} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {useTheme} from '../context/ThemeContext';
 import type {RootStackParamList} from '../navigation/types';
-import {agentsApi, Agent} from '../services/api';
+import {agentsApi, Agent} from '../api';
 
 type StatusFilter = 'all' | Agent['status'];
 

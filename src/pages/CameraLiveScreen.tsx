@@ -13,10 +13,10 @@ import {useNavigation, useRoute, RouteProp} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import Video from 'react-native-video';
 import {useTheme} from '../context/ThemeContext';
-import AppHeader from '../components/common/AppHeader';
-import BottomNav from '../components/common/BottomNav';
+import AppHeader from '../components/layout/AppHeader';
+import BottomNav from '../components/layout/BottomNav';
 import {RootStackParamList} from '../navigation/types';
-import {getToken, streamsLiveMpegTsUrl} from '../services/api';
+import {getToken, streamsLiveMpegTsUrl} from '../api';
 
 type NavProp = NativeStackNavigationProp<RootStackParamList, 'CameraLive'>;
 type Route = RouteProp<RootStackParamList, 'CameraLive'>;

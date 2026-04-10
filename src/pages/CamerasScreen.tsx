@@ -14,7 +14,7 @@ import {useNavigation} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {useTheme} from '../context/ThemeContext';
 import {RootStackParamList} from '../navigation/types';
-import {camerasApi, Camera} from '../services/api';
+import {camerasApi, Camera} from '../api';
 
 type NavProp = NativeStackNavigationProp<RootStackParamList>;
 
